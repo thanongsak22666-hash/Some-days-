@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hand Fitness</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f5f7fb;color:#172033}
+.wrap{max-width:900px;margin:auto;padding:20px}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px}
+h1{margin:0;font-size:28px}.badge{background:#e9edff;padding:8px 12px;border-radius:20px;font-size:14px}
+.panel{background:white;border-radius:20px;padding:18px;margin-bottom:16px;box-shadow:0 5px 20px #0000000d}
+.camera{position:relative;background:#111;border-radius:18px;overflow:hidden;aspect-ratio:16/10;display:flex;align-items:center;justify-content:center}
+video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1);display:none}
+.placeholder{color:white;text-align:center;padding:20px}.placeholder .hand{font-size:60px}
+.controls{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+button{border:0;border-radius:12px;padding:13px 18px;font-size:16px;font-weight:700;cursor:pointer}
+.primary{background:#4f46e5;color:white}.secondary{background:#eef0f6;color:#172033}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+.stat{background:#f7f8fc;border-radius:14px;padding:14px;text-align:center}.num{font-size:28px;font-weight:800}
+.task{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px;border:1px solid #e7e9f0;border-radius:14px;margin-top:10px}
+.task.done{background:#f0fdf4;border-color:#bbf7d0}.small{font-size:13px;color:#687084}
+.status{margin-top:10px;font-weight:700}
+@media(max-width:600px){.stats{grid-template-columns:1fr 1fr}.stats .stat:last-child{grid-column:span 2}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header><div><h1>✋ Hand Fitness</h1><div class="small">เกมออกกำลังกายด้วยมือ</div></div><div class="badge">ภารกิจวันนี้</div></header>
+
+<section class="panel">
+  <div class="camera">
+    <video id="video" autoplay playsinline muted></video>
+    <div class="placeholder" id="placeholder"><div class="hand">✋</div><div>กด “เปิดกล้อง” เพื่อเริ่ม</div></div>
+  </div>
+  <div class="controls">
+    <button class="primary" id="start">เปิดกล้อง</button>
+    <button class="secondary" id="stop" disabled>ปิดกล้อง</button>
+    <button class="secondary" id="count">นับ 1 ครั้ง</button>
+  </div>
+  <div class="status" id="status">สถานะ: ยังไม่ได้เปิดกล้อง</div>
+</section>
+
+<section class="panel">
+<h2>📊 คะแนนของคุณ</h2>
+<div class="stats">
+<div class="stat"><div class="small">จำนวนครั้ง</div><div class="num" id="reps">0</div></div>
+<div class="stat"><div class="small">คะแนน</div><div class="num" id="score">0</div></div>
+<div class="stat"><div class="small">ภารกิจ</div><div class="num" id="progress">0%</div></div>
+</div>
+</section>
+
+<section class="panel">
+<h2>🎯 ภารกิจรายวัน</h2>
+<div class="task" id="task1"><div><b>กำมือ → แบมือ</b><div class="small">ทำ 10 ครั้ง</div></div><span>0/10</span></div>
+<div class="task" id="task2"><div><b>ชูนิ้ว</b><div class="small">ทำ 5 ครั้ง</div></div><span>0/5</span></div>
+<div class="task" id="task3"><div><b>ออกกำลังมือ</b><div class="small">ทำรวม 20 ครั้ง</div></div><span>0/20</span></div>
+</section>
+</div>
+
+<script>
+const video=document.getElementById('video'), placeholder=document.getElementById('placeholder');
+const start=document.getElementById('start'), stop=document.getElementById('stop'), count=document.getElementById('count');
+const statusEl=document.getElementById('status'), repsEl=document.getElementById('reps'), scoreEl=document.getElementById('score'), progressEl=document.getElementById('progress');
+let stream=null,reps=0;
+
+function update(){
+  repsEl.textContent=reps; scoreEl.textContent=reps*10;
+  progressEl.textContent=Math.min(100,Math.round(reps/20*100))+'%';
+  document.querySelector('#task1 span').textContent=Math.min(reps,10)+'/10';
+  document.querySelector('#task2 span').textContent=Math.min(Math.floor(reps/2),5)+'/5';
+  document.querySelector('#task3 span').textContent=Math.min(reps,20)+'/20';
+  if(reps>=10) document.getElementById('task1').classList.add('done');
+  if(reps>=10) document.getElementById('task2').classList.add('done');
+  if(reps>=20) document.getElementById('task3').classList.add('done');
+}
+start.onclick=async()=>{
+ try{
+   if(!navigator.mediaDevices?.getUserMedia) throw new Error('เบราว์เซอร์นี้ไม่รองรับกล้อง');
+   stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false});
+   video.srcObject=stream; video.style.display='block'; placeholder.style.display='none';
+   start.disabled=true; stop.disabled=false; statusEl.textContent='สถานะ: เปิดกล้องแล้ว ✓';
+ }catch(e){statusEl.textContent='สถานะ: ไม่สามารถเปิดกล้องได้ — กรุณาอนุญาต Camera และเปิดไฟล์ผ่าน HTTPS หรือ localhost'}
+};
+stop.onclick=()=>{
+ if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
+ video.srcObject=null;video.style.display='none';placeholder.style.display='block';
+ start.disabled=false;stop.disabled=true;statusEl.textContent='สถานะ: ปิดกล้องแล้ว';
+};
+count.onclick=()=>{reps++;update()};
+update();
+</script>
+</body>
+</html>
